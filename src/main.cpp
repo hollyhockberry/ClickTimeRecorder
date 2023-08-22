@@ -45,23 +45,21 @@ void update_display();
 M5Canvas sprite(&M5.Display);
 
 void update_display() {
-  sprite.setCursor(0, 20);
+  sprite.setCursor(0, 0);
 
   sprite.setTextSize(2.f);
   print_align("Button was", sprite, Alignment::Center);
   print_align("pressed at", sprite, Alignment::Center);
+  sprite.setCursor(0, 180);
+  print_align(format("BAT. %03d", M5.Power.getBatteryLevel()), sprite, Alignment::Right);
 
-  sprite.setCursor(0, 80);
-  sprite.setTextSize(3.f);
   const auto dt = get_datetime();
+  sprite.setCursor(0, 60);
+  sprite.setTextSize(3.f, 6.f);
   print_align(format("%4d/%2d/%2d", dt.date.year, dt.date.month, dt.date.date),
               sprite, Alignment::Center);
   print_align(format("%02d:%02d:%02d", dt.time.hours, dt.time.minutes, dt.time.seconds),
               sprite, Alignment::Center);
-
-  sprite.setCursor(0, 180);
-  sprite.setTextSize(2.f);
-  print_align(format("BAT. %03d", M5.Power.getBatteryLevel()), sprite, Alignment::Right);
 
   sprite.pushSprite(0, 0);
 }

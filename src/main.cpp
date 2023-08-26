@@ -38,9 +38,9 @@ void print_align(const std::string& str, M5Canvas& sprite, Alignment align) {
   sprite.println(str.c_str());
 }
 
+bool is_normal_boot();
 void sync_time();
 m5::rtc_datetime_t get_datetime();
-void update_display();
 
 M5Canvas sprite(&M5.Display);
 
@@ -69,11 +69,18 @@ void setup() {
   M5.Display.invertDisplay(true);
   sprite.createSprite(M5.Display.width(), M5.Display.height());
 
-  sync_time();
-  update_display();
+  if (is_normal_boot()) {
+    sync_time();
+  } else {
+    update_display();
+  }
 }
 
 #ifdef SDL_h_
+
+bool is_normal_boot() {
+  return true;
+}
 
 void sync_time() {}
 
@@ -105,42 +112,55 @@ bool connect_wifi() {
   WiFi.begin();
   const auto now = ::millis();
   const auto TIMEOUT = 5 * 1000UL;
+  M5.Display.print("Connecting to WiFi");
   while ((::millis() - now) < TIMEOUT) {
     if (WiFi.status() == WL_CONNECTED) {
+      M5.Display.println("Connected!");
       return true;
     }
+    M5.Display.print(".");
     ::delay(500);
-    M5_LOGI("Connecting to WiFi...");
   }
+  M5.Display.println();
+  M5.Display.print("Waiting for SmartConfig ");
+
 	WiFi.mode(WIFI_AP_STA);
 	WiFi.beginSmartConfig();
 	while (!WiFi.smartConfigDone()) {
 		::delay(500);
-    M5_LOGI("Waiting for SmartConfig...");
+    M5.Display.print(".");
 	}
-  M5_LOGI("Received SmartConfig");
+  M5.Display.println();
+  M5.Display.print("Connecting to WiFi ");
   while (WiFi.status() != WL_CONNECTED) {
+    M5.Display.print(".");
     ::delay(500);
-    M5_LOGI("Connecting to WiFi...");
   }
+  M5.Display.println("Connected!");
   return true;
 }
 
 void sync_time() {
-  if (::esp_sleep_get_wakeup_cause() != 0) {
-    return;
-  }
+  M5.Display.clear(TFT_BLACK);
+  M5.Display.setCursor(0, 0);
+  M5.Display.setTextSize(2.f);
   if (!connect_wifi()) {
     return;
   }
+  M5.Display.print("Sync sntp ");
   ::configTzTime("JST-9", "ntp.nict.jp", "time.google.com", "ntp.jst.mfeed.ad.jp");
   while (::sntp_get_sync_status() == SNTP_SYNC_STATUS_RESET) {
-    Serial.print(".");
+    M5.Display.print(".");
     ::delay(1000);
   }
   struct tm localTime;
   ::getLocalTime(&localTime);
   M5.Rtc.setDateTime(&localTime);
+  M5.Display.clear(TFT_BLACK);
+}
+
+bool is_normal_boot() {
+  return ::esp_sleep_get_wakeup_cause() == 0;
 }
 
 m5::rtc_datetime_t get_datetime() {
@@ -152,7 +172,7 @@ m5::rtc_datetime_t get_datetime() {
 void loop() {
   ::pinMode(GPIO_NUM_33, INPUT_PULLUP);
   ::esp_sleep_enable_ext0_wakeup(GPIO_NUM_33, LOW);
-  M5.Power.deepSleep(0ULL, false);
+  M5.Power.deepSleep(0, false);
 }
 
 #endif  // SDL_h_
